@@ -52,6 +52,22 @@
   --fine:#ced1d8;  /* PISO 13,02:1 no chao / 11,27:1 na superficie */
   --gut:20px;
   --ch:'Chakra Petch',system-ui,sans-serif;
+  /* FUMACA derivada de --red, para a cor de destaque comandar TODO o vermelho
+     da pagina. Antes eram dois vermelhos cravados, rgba(150,4,26,.26) e
+     rgba(96,2,18,.28), que nao respondiam ao token - tres vermelhos numa peca
+     que so' admite um. Os dois eram o proprio --red escurecido (matiz 351 nos
+     tres); sobre chao quase preto, escurecer a tinta e baixar o alfa dao o
+     mesmo pixel, com fator igual a' distancia ao chao: (150-8)/(228-8)=,6455
+     e (96-8)/(228-8)=,4000. Logo .26 x ,6455 = 16,8% e .28 x ,4000 = 11,2%.
+     A web usa alfa um pouco maior que a A4 (que roda 15,5% e 10,4%) porque a
+     tela aguenta mais ambiente que o papel - a razao entre as duas manchas e'
+     a mesma nas duas versoes.
+     MEDIDO nos dois renders a 1280: sobre o chao limpo a mancha e' a mesma
+     (diferenca de 1/255 no pior ponto).
+     A cor da fumaca NAO conserta a ordem de pintura - ver a regra .bgfx, onde
+     o defeito estrutural foi corrigido em 25/08/2026. */
+  --smk-1:color-mix(in srgb, var(--red) 16.8%, transparent);
+  --smk-2:color-mix(in srgb, var(--red) 11.2%, transparent);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 /* overflow-x:clip nos DOIS - a fumaca radial estoura a direita e no telefone
@@ -68,17 +84,42 @@ strong{font-weight:700;color:var(--max);}      /* unico mecanismo de enfase */
 a{color:var(--max);text-decoration:none;
   border-bottom:1px solid rgba(255,255,255,.45);}
 
-.wrap{max-width:1080px;margin:0 auto;position:relative;z-index:1;}
+/* .wrap e' o CONTEXTO DE EMPILHAMENTO da peca (position + z-index != auto).
+   E' o que prende a camada de fundo negativa la dentro - sem isso a fumaca
+   escaparia para tras do chao da pagina e sumiria. */
+.wrap{max-width:1080px;margin:0 auto;position:relative;z-index:1;isolation:isolate;}
 .pad{padding-left:var(--gut);padding-right:var(--gut);}
 
 /* fumaca radial - proporcoes do deck, presa ao topo e ao pe.
-   Vive dentro de uma camada que RECORTA, para nao alargar a pagina. */
-.bgfx{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
+   Vive dentro de uma camada que RECORTA, para nao alargar a pagina.
+   A COR sai de --smk-1/--smk-2, derivados de --red no :root (mesma correcao
+   aplicada na A4 em 25/08/2026): nenhum vermelho e' escrito aqui.
+
+   ORDEM DE EMPILHAMENTO - CORRIGIDO EM 25/08/2026.
+   .bgfx tinha z-index:0. Um filho POSICIONADO com z-index 0/auto e' pintado no
+   passo 8 da ordem de pintura do CSS, DEPOIS dos fundos (passo 4) e do texto
+   (passo 5) dos irmaos NAO posicionados. Ou seja: a camada de FUNDO passava
+   por CIMA do conteudo. Medido: filete de --red lendo 227,0,30 em vez de
+   228,0,31 e texto do rodape lendo 207,204,211 em vez de 206,209,216.
+   A troca da fumaca para uma cor derivada de --red mascarou o sintoma por
+   acidente (tinta da mesma cor sobre a mesma cor nao muda o pixel), mas o
+   defeito voltaria a aparecer em qualquer cenario em que fumaca e filete nao
+   coincidam - e voltava JA, na antialiasing das bordas.
+   Correcao: z-index:-1. Assim a camada e' pintada no passo 3, logo depois do
+   fundo do proprio .wrap (que e' transparente, entao a fumaca continua visivel
+   sobre o chao) e ANTES de todo o conteudo. E' o mesmo resultado do par
+   .sheet/.pg da versao A4, sem precisar de um elemento novo envolvendo a peca
+   inteira - o que aqui seria arriscado, porque .tese e .cta sangram para fora
+   com margem negativa e um novo ancestral posicionado mudaria o bloco
+   continente de tudo que e' absoluto la dentro.
+   O `isolation:isolate` no .wrap garante o contexto de empilhamento mesmo se
+   alguem tirar o z-index:1 de la um dia. */
+.bgfx{position:absolute;inset:0;overflow:hidden;z-index:-1;pointer-events:none;}
 .smk{position:absolute;border-radius:50%;filter:blur(50px);pointer-events:none;}
 .k1{width:420px;height:420px;top:-170px;left:-150px;
-    background:radial-gradient(circle,rgba(150,4,26,.26),transparent 66%);}
+    background:radial-gradient(circle,var(--smk-1),transparent 66%);}
 .k2{width:460px;height:460px;bottom:-190px;right:-160px;
-    background:radial-gradient(circle,rgba(96,2,18,.28),transparent 66%);}
+    background:radial-gradient(circle,var(--smk-2),transparent 66%);}
 
 /* ---------------------------------------------------------------- topo */
 .top{display:flex;align-items:center;justify-content:space-between;gap:14px;
